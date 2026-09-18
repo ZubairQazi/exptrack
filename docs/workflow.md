@@ -126,7 +126,7 @@ Use a filesystem with working advisory locks and atomic rename, and one submissi
 host per study. Workers do not contend on the registry lock. This is not a
 multi-user service or an access-control boundary. The root must be private to the
 researcher, on compute-accessible storage. Keep manifests in version control or
-publish them deliberately; tracking outputs under `reports/` remain ignored.
+publish them deliberately; keep local tracking outputs under the ignored `work/` directory or outside the checkout.
 
 ## Agent workflow and verification
 
