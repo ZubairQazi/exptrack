@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exptrack-slurm"
+version = "0.1.0"
+description = "Manifest-based experiment tracking, artifact validation, and selective retries for native Slurm arrays"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Zubair Qazi"}]
+dependencies = []
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+
+[project.scripts]
+exptrack = "exptrack.cli:main"
+
+[project.urls]
+Repository = "https://github.com/ZubairQazi/exptrack"
+
+[tool.setuptools.packages.find]
+where = ["src"]
