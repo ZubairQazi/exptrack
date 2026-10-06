@@ -337,7 +337,7 @@ def worker(root, sid, index):
         for item in task.get("inputs", []):
             require(digest(item["path"]) == item["sha256"], f"input changed: {item['path']}")
         output = str(directory / "outputs")
-        expand = lambda x: x.replace("{output_dir}", output).replace("{attempt_dir}", str(directory))
+        expand = lambda x: x.replace("{output_dir}", output).replace("{attempt_dir}", str(directory)).replace("{study_dir}", str(root))
         env = os.environ.copy()
         env.update({k: expand(v) for k, v in task.get("environment", {}).items()})
         env.update(EXPTRACK_OUTPUT_DIR=output, EXPTRACK_ATTEMPT_DIR=str(directory), EXPTRACK_TASK_ID=key)

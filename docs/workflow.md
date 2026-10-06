@@ -10,7 +10,7 @@ resource object, and `tasks`. Each task has:
   fold/group, seed, and any other dimensions of the scientific comparison.
 - `cwd`: absolute research checkout path; `command`: an argv list, never an
   implicitly evaluated shell string.
-- `environment`: optional string mapping. `{output_dir}` and `{attempt_dir}` are
+- `environment`: optional string mapping. `{output_dir}`, `{attempt_dir}`, and `{study_dir}` are
   expanded in argv/environment values. `SLURM_*`, `EXPTRACK_*`, and
   `CUDA_VISIBLE_DEVICES` overrides are rejected.
 - `inputs`: optional objects with absolute `path` and expected `sha256`.
@@ -45,11 +45,31 @@ File checks require a nonempty file and compute SHA-256. Optional `sha256` pins
 a known digest; `sha256_from: {"path": "results.json", "field":
 "prediction_artifact.sha256"}` compares against a JSON result record.
 
-Commands must write into the provided attempt directory. Existing scripts that
+Results must be written into the provided attempt directory. Existing scripts that
 hardcode shared canonical output paths need a small adapter before submission.
 Do not submit a whole sequential sweep as one task if per-experiment retries are
 desired. Keeping a validated group of arms together is also supported: completion
 then requires every expected row in that group.
+
+### Shared dataset caches
+
+Use `{study_dir}/cache` for reusable, label-free dataset inputs instead of an
+attempt-local cache. `{study_dir}` expands to the absolute tracking root in
+command arguments, environment values, and validator arguments. Every task and
+retry within that study gets the same path; different studies remain separate.
+For example, set the cache variable recognized by your training program:
+
+```json
+{"environment": {"DATASET_CACHE_ROOT": "{study_dir}/cache"}}
+```
+
+The tracker expands the path; your program creates and manages the cache. Cache
+keys must distinguish datasets and preprocessing configurations. Publish complete
+files atomically when workers share a cache. Keep fitted preprocessing, model
+state, split-specific data, and results in their own attempt directories unless
+their cache keys explicitly isolate them. Exptrack does not infer cache keys,
+rewrite environment settings, or delete caches. Set this policy before `init`;
+existing frozen manifests and attempts retain their recorded configuration.
 
 For old results, create a compatible manifest and a JSON mapping from task IDs to
 absolute existing output directories:

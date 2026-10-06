@@ -41,6 +41,11 @@ there. Specify row counts, unique keys, expected identities, finite metrics,
 checksums, and optional scientific validators in the manifest. Slurm completion
 alone does not establish experiment completion.
 
+For large reusable dataset inputs, point your program's cache environment variable
+at `{study_dir}/cache` in the manifest. Tasks and retries share this study-local
+path while keeping separate outputs. See the [cache conventions](docs/workflow.md#shared-dataset-caches)
+for cache identity and concurrent-write requirements.
+
 ## What it handles
 
 - Frozen task identity and input fingerprints.

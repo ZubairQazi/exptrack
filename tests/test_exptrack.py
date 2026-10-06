@@ -69,6 +69,47 @@ class TrackerTests(unittest.TestCase):
         core.resolve(self.root, "s000001", job_id="12345", reason="Matched scheduler job name and submission timestamp")
         self.assertEqual(self.status("PENDING")["status"], "ACTIVE")
 
+    def test_study_cache_shared_across_tasks_and_retry(self):
+        task = copy.deepcopy(self.task)
+        task['environment'] = {'DATASET_CACHE_ROOT': '{study_dir}/cache'}
+        task['command'] = [sys.executable, '-c',
+            "import os,json,sys; from pathlib import Path; "
+            "cache=Path(os.environ['DATASET_CACHE_ROOT']); "
+            "assert cache == Path(sys.argv[1])/'cache'; "
+            "cache.mkdir(parents=True,exist_ok=True); "
+            "p=cache/'dataset.bin'; hit=p.exists(); "
+            "p.write_bytes(b'dataset') if not hit else None; "
+            "out=Path(os.environ['EXPTRACK_OUTPUT_DIR']); "
+            "(out/'results.json').write_text(json.dumps({'leak_check':'PASS','metric':0.7,'cache_hit':hit}))",
+            '{study_dir}']
+        task['validator'] = [sys.executable, '-c',
+            "import os,sys; from pathlib import Path; "
+            "assert (Path(sys.argv[1])/'cache/dataset.bin').is_file(); "
+            "assert Path(sys.argv[2]) == Path(os.environ['EXPTRACK_OUTPUT_DIR']); "
+            "assert Path(sys.argv[3]) == Path(os.environ['EXPTRACK_ATTEMPT_DIR'])",
+            '{study_dir}', '{output_dir}', '{attempt_dir}']
+        other = copy.deepcopy(task)
+        other.update(id='B3-f1-s0', identity={'setup': 'B3', 'fold': 1, 'seed': 0})
+        core.write(self.source, {'version': 1, 'provenance': {'source': 'synthetic'}, 'tasks': [task, other]})
+        self.root = self.base/'shared study'
+        core.initialize(self.source, self.root)
+        self.submitted()
+        for index, key in enumerate([task['id'], other['id']]):
+            self.assertEqual(core.worker(self.root, 's000001', index), 0)
+            output = self.root/'attempts/s000001'/key/'outputs/results.json'
+            self.assertEqual(core.read(output)['cache_hit'], index == 1)
+        # A changed accepted artifact permits an explicit retry once terminal.
+        output = self.root/'attempts/s000001'/task['id']/'outputs/results.json'
+        core.write(output, {'leak_check': 'PASS', 'metric': 0.9})
+        with patch('exptrack.core.scheduler_states', return_value=(
+                {'12345_0': 'COMPLETED', '12345_1': 'COMPLETED'}, [])), \
+                patch('exptrack.core.subprocess.run', return_value=subprocess.CompletedProcess([], 0, '12346\n', '')):
+            core.submit(self.root, retry=True, execute=True, selected=[task['id']])
+        self.assertEqual(core.worker(self.root, 's000002', 0), 0)
+        output = self.root/'attempts/s000002'/task['id']/'outputs/results.json'
+        self.assertTrue(core.read(output)['cache_hit'])
+        self.assertEqual(list(self.root.rglob('dataset.bin')), [self.root/'cache/dataset.bin'])
+
     def test_terminal_missing_and_selective_retry(self):
         self.submitted()
         self.assertEqual(self.status("COMPLETED")["status"], "MISSING")
