@@ -142,6 +142,12 @@ an attempt cannot overwrite itself. Native `sacct`/`squeue` state is joined on
 array **element** IDs, not parent jobs or `.batch` records. Federated clusters are
 not supported; an unexpected cluster-qualified response remains unresolved.
 
+After moving an inactive study, retain a symlink at its original absolute path
+when recorded artifacts or research inputs refer to that location. Status resolves
+recorded artifact paths before comparison, so aliases do not invalidate unchanged
+results. Checksums, sizes and other acceptance evidence still have to match.
+This does not rewrite source/configuration paths or relocate active jobs.
+
 Use a filesystem with working advisory locks and atomic rename, and one submission
 host per study. Workers do not contend on the registry lock. This is not a
 multi-user service or an access-control boundary. The root must be private to the

@@ -226,7 +226,9 @@ def inventory(root, offline=False):
                 record["status"] = "ACTIVE"
             elif runtime.get("phase") == "finished" and runtime.get("exit_code") == 0:
                 evidence = check_outputs(task, directory / "outputs")
-                if evidence["artifacts"] != runtime.get("evidence", {}).get("artifacts"):
+                recorded = runtime.get("evidence", {}).get("artifacts", [])
+                recorded = [{**a, "path": str(Path(a["path"]).resolve())} for a in recorded]
+                if evidence["artifacts"] != recorded:
                     evidence["valid"] = False
                     evidence["errors"].append("artifacts changed since worker validation")
                 record["evidence"] = evidence

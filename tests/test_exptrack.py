@@ -69,6 +69,20 @@ class TrackerTests(unittest.TestCase):
         core.resolve(self.root, "s000001", job_id="12345", reason="Matched scheduler job name and submission timestamp")
         self.assertEqual(self.status("PENDING")["status"], "ACTIVE")
 
+    def test_relocated_root_with_original_path_alias_and_mutation(self):
+        self.submitted()
+        self.assertEqual(core.worker(self.root, 's000001', 0), 0)
+        old = self.root
+        moved = self.base/'moved-study'
+        old.rename(moved)
+        old.symlink_to(moved, target_is_directory=True)
+        self.root = moved
+        self.assertEqual(self.status('COMPLETED')['status'], 'COMPLETE')
+        self.assertEqual(core.inventory(old, offline=True)['counts'], {'COMPLETE': 1})
+        output = moved/'attempts/s000001/B3-f0-s0/outputs/results.json'
+        core.write(output, {'leak_check': 'PASS', 'metric': 0.9})
+        self.assertEqual(self.status('COMPLETED')['status'], 'INVALID')
+
     def test_study_cache_shared_across_tasks_and_retry(self):
         task = copy.deepcopy(self.task)
         task['environment'] = {'DATASET_CACHE_ROOT': '{study_dir}/cache'}
